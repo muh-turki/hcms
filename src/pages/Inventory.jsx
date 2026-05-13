@@ -1,0 +1,193 @@
+import React, { useEffect, useState } from 'react';
+import api from '../api';
+import toast from 'react-hot-toast';
+import TopBar from '../components/TopBar';
+import { useApp } from '../context/AppContext';
+import { useAuth } from '../auth/AuthContext';
+
+const EMPTY = { name: '', name_ar: '', sku: '', category: 'General', cost_price: 0, selling_price: 0, current_stock: 0, min_stock_level: 5, expiry_date: '' };
+
+export default function Inventory() {
+  const { user } = useAuth();
+  const { t } = useApp();
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [search, setSearch]     = useState('');
+  const [modal, setModal]       = useState(null); // 'add' or 'edit'
+  const [form, setForm]         = useState(EMPTY);
+  const [saving, setSaving]     = useState(false);
+
+  const isAdmin = user?.role === 'admin';
+
+  useEffect(() => { fetch(); }, []);
+  const fetch = () => {
+    setLoading(true);
+    api.get('/products').then(r => setProducts(r.data)).finally(() => setLoading(false));
+  };
+
+  const open = (p = null) => { setForm(p || EMPTY); setModal(p ? 'edit' : 'add'); };
+  const close = () => { setModal(null); setForm(EMPTY); };
+  const f = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
+
+  const save = async e => {
+    e.preventDefault(); setSaving(true);
+    try {
+      if (modal === 'add') await api.post('/products', form);
+      else await api.put(`/products/${form.id}`, form);
+      toast.success(modal === 'add' ? 'Added!' : 'Updated!');
+      close(); fetch();
+    } catch { toast.error('Save failed'); }
+    finally { setSaving(false); }
+  };
+
+  const del = async id => {
+    if (!window.confirm(t('common.delete') + '?')) return;
+    try { await api.delete(`/products/${id}`); toast.success('Deleted'); fetch(); }
+    catch { toast.error('Delete failed'); }
+  };
+
+  const filtered = products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()) || p.sku?.toLowerCase().includes(search.toLowerCase()));
+
+  return (
+    <>
+      <TopBar title={t('nav.inventory')} />
+      
+      {modal && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && close()}>
+          <div className="modal modal-md">
+            <div className="modal-header">
+              <h3 className="modal-title">{modal === 'add' ? `➕ ${t('inv.add_product')}` : `✏️ ${t('inv.edit_product')}`}</h3>
+              <button className="btn btn-ghost btn-icon" onClick={close}>✕</button>
+            </div>
+            <form onSubmit={save}>
+              <div className="form-group">
+                <label className="form-label">{t('common.name')} (English) <span className="required">*</span></label>
+                <input className="form-input" placeholder="e.g. Arabic Coffee" value={form.name} onChange={e => f('name', e.target.value)} required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">الاسم بالعربي <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 400 }}>(يظهر للنزيل في قائمة الغرف)</span></label>
+                <input
+                  className="form-input"
+                  placeholder="مثال: قهوة عربية"
+                  value={form.name_ar || ''}
+                  onChange={e => f('name_ar', e.target.value)}
+                  dir="rtl"
+                  style={{ textAlign: 'right', fontFamily: 'inherit' }}
+                />
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">{t('inv.sku')}</label>
+                  <input className="form-input" value={form.sku} onChange={e => f('sku', e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">{t('common.category')}</label>
+                  <select className="form-select" value={form.category} onChange={e => f('category', e.target.value)}>
+                    {['Beverages', 'Food', 'Desserts', 'Snacks', 'General'].map(cat => (
+                      <option key={cat} value={cat}>{t('cat.' + cat)}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">{t('inv.cost_price')}</label>
+                  <input className="form-input" type="number" step="0.01" value={form.cost_price} onChange={e => f('cost_price', e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">{t('inv.selling_price')}</label>
+                  <input className="form-input" type="number" step="0.01" value={form.selling_price} onChange={e => f('selling_price', e.target.value)} />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">{t('inv.current_stock')}</label>
+                  <input className="form-input" type="number" value={form.current_stock} onChange={e => f('current_stock', e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">{t('inv.min_stock')}</label>
+                  <input className="form-input" type="number" value={form.min_stock_level} onChange={e => f('min_stock_level', e.target.value)} />
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">{t('inv.expiry_date')}</label>
+                <input className="form-input" type="date" value={form.expiry_date || ''} onChange={e => f('expiry_date', e.target.value)} />
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={close}>{t('common.cancel')}</button>
+                <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Saving…' : t('inv.save_product')}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <div className="page">
+        <div className="page-header">
+          <div><div className="page-title">{t('nav.inventory')}</div><div className="page-subtitle">{products.length} {products.length === 1 ? 'item' : 'items'} total</div></div>
+          {isAdmin && <button className="btn btn-primary" onClick={() => open()}>➕ {t('inv.add_product')}</button>}
+        </div>
+
+        <div className="filters-bar">
+          <div className="search-bar"><span className="search-icon">🔍</span><input className="form-input" placeholder={t('common.search') + '…'} value={search} onChange={e => setSearch(e.target.value)} /></div>
+        </div>
+
+        {loading ? <div className="loading"><div className="spinner"/></div> : (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>{t('common.name')}</th>
+                  <th>{t('common.category')}</th>
+                  <th>{t('inv.stock')}</th>
+                  <th>{t('inv.min')}</th>
+                  <th>{t('common.price')}</th>
+                  <th>{t('inv.margin')}</th>
+                  <th>{t('inv.expiry')}</th>
+                  <th>{t('inv.status')}</th>
+                  {isAdmin && <th>{t('common.actions')}</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(p => {
+                  const margin = p.selling_price - p.cost_price;
+                  const isLow = p.current_stock <= p.min_stock_level;
+                  const isOut = p.current_stock <= 0;
+                  return (
+                    <tr key={p.id}>
+                      <td style={{ fontWeight: 600 }}>
+                        {p.name}
+                        {p.name_ar && <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', direction: 'rtl', textAlign: 'right' }}>{p.name_ar}</div>}
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{p.sku}</span>
+                      </td>
+                      <td><span className="badge badge-gray">{t('cat.' + p.category)}</span></td>
+                      <td><span className={`badge ${isOut ? 'badge-red' : isLow ? 'badge-yellow' : 'badge-green'}`}>{p.current_stock}</span></td>
+                      <td style={{ color: 'var(--text-muted)' }}>{p.min_stock_level}</td>
+                      <td>{Number(p.selling_price).toFixed(2)}</td>
+                      <td style={{ color: margin >= 0 ? 'var(--green)' : 'var(--red)' }}>{margin.toFixed(2)}</td>
+                      <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{p.expiry_date || '—'}</td>
+                      <td>
+                        {isOut ? <span className="badge badge-red">{t('inv.out')}</span> : 
+                         isLow ? <span className="badge badge-yellow">{t('inv.low')}</span> : 
+                        <span className="badge badge-green">{t('inv.ok')}</span>}
+                      </td>
+                      {isAdmin && (
+                        <td>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <button className="btn btn-secondary btn-sm" onClick={() => open(p)}>✏️</button>
+                            <button className="btn btn-danger btn-sm" onClick={() => del(p.id)}>🗑️</button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            {filtered.length === 0 && <div className="empty-state"><div className="empty-state-text">{t('inv.no_products')}</div></div>}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}

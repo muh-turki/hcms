@@ -1,0 +1,10 @@
+node_modules
+dist
+.env
+frontend
+backend
+frontend_package.json
+frontend_lock.json
+api/node_modules
+.DS_Store
+*.log

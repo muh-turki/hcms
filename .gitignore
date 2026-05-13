@@ -1,0 +1,15 @@
+node_modules
+dist
+.env
+.vercel
+.railway
+*.log
+frontend_package.json
+frontend_lock.json
+frontend/node_modules
+backend/node_modules
+api/node_modules
+api/hcms.db
+api/hcms.db-wal
+api/hcms.db-shm
+.DS_Store
