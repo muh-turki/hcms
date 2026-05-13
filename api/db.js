@@ -121,4 +121,18 @@ try { db.exec(`ALTER TABLE products ADD COLUMN name_ar TEXT`); } catch {}
 // Migrate old 'staff' role to 'cashier'
 try { db.exec(`UPDATE users SET role = 'cashier' WHERE role = 'staff'`); } catch {}
 
+// ─── Auto-seed default admin if no users exist (fresh deployment) ─────────────
+const userCount = db.prepare('SELECT COUNT(*) as cnt FROM users').get();
+if (userCount.cnt === 0) {
+  console.log('🌱 No users found — creating default admin and cashier...');
+  const bcrypt = require('bcryptjs');
+  const adminHash = bcrypt.hashSync('admin123', 10);
+  const cashierHash = bcrypt.hashSync('staff123', 10);
+  db.prepare('INSERT INTO users (username, password_hash, role, full_name) VALUES (?, ?, ?, ?)')
+    .run('admin', adminHash, 'admin', 'System Administrator');
+  db.prepare('INSERT INTO users (username, password_hash, role, full_name) VALUES (?, ?, ?, ?)')
+    .run('staff', cashierHash, 'cashier', 'Front Desk Staff');
+  console.log('✅ Default users created: admin/admin123, staff/staff123');
+}
+
 module.exports = db;
