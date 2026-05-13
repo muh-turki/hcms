@@ -13,6 +13,7 @@
     "seed": "node api/seed.js"
   },
   "dependencies": {
+    "@vitejs/plugin-react": "^4.2.1",
     "axios": "^1.6.8",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
@@ -26,11 +27,10 @@
     "react-hot-toast": "^2.4.1",
     "react-router-dom": "^6.22.3",
     "recharts": "^2.12.2",
+    "vite": "^5.1.6",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "^4.2.1",
-    "concurrently": "^9.2.1",
-    "vite": "^5.1.6"
+    "concurrently": "^9.2.1"
   }
 }
