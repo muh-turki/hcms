@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import TopBar from '../components/TopBar';
 import { useApp } from '../context/AppContext';
 
-const EMPTY = { username: '', password: '', role: 'staff', full_name: '' };
+const EMPTY = { username: '', password: '', role: 'cashier', full_name: '' };
 
 export default function Users() {
   const { t } = useApp();
@@ -68,7 +68,8 @@ export default function Users() {
                 <label className="form-label">{t('usr.role')} <span className="required">*</span></label>
                 <select className="form-select" value={form.role} onChange={e => f('role', e.target.value)} required>
                   <option value="admin">{t('usr.admin')}</option>
-                  <option value="staff">{t('usr.staff')}</option>
+                  <option value="supervisor">{t('usr.supervisor') || 'مشرف'}</option>
+                  <option value="cashier">{t('usr.cashier') || 'بائع'}</option>
                 </select>
               </div>
               <div className="modal-footer">
@@ -94,7 +95,11 @@ export default function Users() {
                   <tr key={u.id}>
                     <td style={{ fontWeight: 600 }}>{u.full_name || '—'}</td>
                     <td><code style={{ color: 'var(--blue)' }}>{u.username}</code></td>
-                    <td>{u.role === 'admin' ? <span className="badge badge-accent">{t('usr.admin')}</span> : <span className="badge badge-gray">{t('usr.staff')}</span>}</td>
+                    <td>
+                      {u.role === 'admin' && <span className="badge badge-accent">{t('usr.admin')}</span>}
+                      {u.role === 'supervisor' && <span className="badge" style={{ background: 'rgba(59,130,246,0.15)', color: '#3b82f6' }}>{t('usr.supervisor') || 'مشرف'}</span>}
+                      {(u.role === 'cashier' || u.role === 'staff') && <span className="badge badge-gray">{t('usr.cashier') || 'بائع'}</span>}
+                    </td>
                     <td style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{u.created_at?.slice(0, 10)}</td>
                     <td><div style={{ display: 'flex', gap: 6 }}>
                       <button className="btn btn-secondary btn-sm" onClick={() => open(u)}>✏️</button>

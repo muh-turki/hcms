@@ -49,13 +49,13 @@ function MainLayout() {
         <Routes>
           <Route path="/"         element={<Dashboard />} />
           <Route path="/pos"      element={<POS />} />
-          <Route path="/inventory"element={<Inventory />} />
-          <Route path="/suppliers"element={<Suppliers />} />
-          <Route path="/customers"element={<Customers />} />
-          <Route path="/rooms"    element={<RoomConsumption />} />
-          <Route path="/orders"   element={<PendingOrders />} />
-          <Route path="/reports"  element={<Reports />} />
-          <Route path="/refunds"  element={<Refunds />} />
+          <Route path="/orders"   element={<ProtectedRoute minRole="supervisor"><PendingOrders /></ProtectedRoute>} />
+          <Route path="/refunds"  element={<ProtectedRoute minRole="supervisor"><Refunds /></ProtectedRoute>} />
+          <Route path="/inventory"element={<ProtectedRoute minRole="supervisor"><Inventory /></ProtectedRoute>} />
+          <Route path="/suppliers"element={<ProtectedRoute minRole="supervisor"><Suppliers /></ProtectedRoute>} />
+          <Route path="/customers"element={<ProtectedRoute minRole="supervisor"><Customers /></ProtectedRoute>} />
+          <Route path="/rooms"    element={<ProtectedRoute minRole="supervisor"><RoomConsumption /></ProtectedRoute>} />
+          <Route path="/reports"  element={<ProtectedRoute adminOnly><Reports /></ProtectedRoute>} />
           <Route path="/users"    element={<ProtectedRoute adminOnly><Users /></ProtectedRoute>} />
           <Route path="/audit"    element={<ProtectedRoute adminOnly><AuditLogs /></ProtectedRoute>} />
           <Route path="/qrcodes"  element={<ProtectedRoute adminOnly><QRCodes /></ProtectedRoute>} />

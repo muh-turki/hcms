@@ -1,9 +1,9 @@
 const router = require('express').Router();
 const db = require('../db');
-const { verifyToken } = require('../middleware');
+const { verifyToken, requireSupervisor } = require('../middleware');
 
-// POST /api/refunds
-router.post('/', verifyToken, (req, res) => {
+// POST /api/refunds (admin + supervisor)
+router.post('/', verifyToken, requireSupervisor, (req, res) => {
   const { sale_id, product_id, quantity, reason } = req.body;
   if (!sale_id || !product_id || !quantity) return res.status(400).json({ error: 'sale_id, product_id, and quantity are required' });
   if (!reason || !reason.trim()) return res.status(400).json({ error: 'Refund reason is strongly required' });

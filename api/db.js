@@ -18,7 +18,7 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
-    role TEXT NOT NULL DEFAULT 'staff' CHECK(role IN ('admin','staff')),
+    role TEXT NOT NULL DEFAULT 'cashier' CHECK(role IN ('admin','supervisor','cashier','staff')),
     full_name TEXT,
     created_at TEXT DEFAULT (datetime('now'))
   );
@@ -115,7 +115,10 @@ db.exec(`
   INSERT OR IGNORE INTO settings (key, value) VALUES ('hotel_name', 'مقهى الفندق');
 `);
 
-// ─── Incremental Migrations (safe on existing DBs) ────────────────────────────
+// ─── Incremental Migrations (safe on existing DBs) ────────────────────────────────────────
 try { db.exec(`ALTER TABLE products ADD COLUMN name_ar TEXT`); } catch {}
+
+// Migrate old 'staff' role to 'cashier'
+try { db.exec(`UPDATE users SET role = 'cashier' WHERE role = 'staff'`); } catch {}
 
 module.exports = db;

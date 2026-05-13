@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const db = require('../db');
-const { verifyToken, requireAdmin } = require('../middleware');
+const { verifyToken, requireAdmin, requireSupervisor } = require('../middleware');
 
 // GET /api/products
 router.get('/', verifyToken, (req, res) => {
@@ -33,8 +33,8 @@ router.get('/categories', verifyToken, (req, res) => {
   res.json(rows.map(r => r.category));
 });
 
-// POST /api/products (admin only)
-router.post('/', verifyToken, requireAdmin, (req, res) => {
+// POST /api/products (admin + supervisor)
+router.post('/', verifyToken, requireSupervisor, (req, res) => {
   const { name, name_ar, sku, category, cost_price, selling_price, current_stock, min_stock_level, expiry_date } = req.body;
   if (!name || !category) return res.status(400).json({ error: 'Name and category required' });
 
@@ -46,8 +46,8 @@ router.post('/', verifyToken, requireAdmin, (req, res) => {
   res.status(201).json(db.prepare('SELECT * FROM products WHERE id = ?').get(result.lastInsertRowid));
 });
 
-// PUT /api/products/:id (admin only)
-router.put('/:id', verifyToken, requireAdmin, (req, res) => {
+// PUT /api/products/:id (admin + supervisor)
+router.put('/:id', verifyToken, requireSupervisor, (req, res) => {
   const { name, name_ar, sku, category, cost_price, selling_price, current_stock, min_stock_level, expiry_date } = req.body;
   const { id } = req.params;
 

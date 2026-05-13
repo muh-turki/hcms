@@ -2,6 +2,9 @@ const jwt = require('jsonwebtoken');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'hcms-super-secret-key-2024';
 
+// Roles hierarchy: admin > supervisor > cashier
+const ROLE_LEVEL = { admin: 3, supervisor: 2, cashier: 1 };
+
 function generateToken(user) {
   return jwt.sign(
     { id: user.id, username: user.username, role: user.role },
@@ -31,4 +34,13 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-module.exports = { generateToken, verifyToken, requireAdmin };
+// Allows admin + supervisor
+function requireSupervisor(req, res, next) {
+  const level = ROLE_LEVEL[req.user?.role] || 0;
+  if (level < ROLE_LEVEL.supervisor) {
+    return res.status(403).json({ error: 'Supervisor or Admin access required' });
+  }
+  next();
+}
+
+module.exports = { generateToken, verifyToken, requireAdmin, requireSupervisor, ROLE_LEVEL };
