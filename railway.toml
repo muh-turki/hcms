@@ -6,8 +6,5 @@ startCommand = "npm start"
 [deploy]
 startCommand = "npm start"
 healthcheckPath = "/api/health"
-healthcheckTimeout = 30
+healthcheckTimeout = 60
 restartPolicyType = "on_failure"
-
-[environments.production.variables]
-NODE_ENV = "production"

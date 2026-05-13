@@ -29,19 +29,19 @@ function playAlertSound() {
     const t = ctx.currentTime;
     // First burst — high urgency double beep
     playTone(t + 0.00, 1047, 0.18, 'square');
-    playTone(t + 0.00,  523, 0.18, 'sawtooth');
+    playTone(t + 0.00, 523, 0.18, 'sawtooth');
     playTone(t + 0.22, 1047, 0.18, 'square');
-    playTone(t + 0.22,  523, 0.18, 'sawtooth');
+    playTone(t + 0.22, 523, 0.18, 'sawtooth');
 
     // Second burst
     playTone(t + 0.55, 1319, 0.20, 'square');
-    playTone(t + 0.55,  659, 0.20, 'sawtooth');
+    playTone(t + 0.55, 659, 0.20, 'sawtooth');
     playTone(t + 0.78, 1319, 0.20, 'square');
-    playTone(t + 0.78,  659, 0.20, 'sawtooth');
+    playTone(t + 0.78, 659, 0.20, 'sawtooth');
 
     // Final long confirmation tone
     playTone(t + 1.10, 1568, 0.40, 'square');
-    playTone(t + 1.10,  784, 0.40, 'sawtooth');
+    playTone(t + 1.10, 784, 0.40, 'sawtooth');
   } catch (e) {
     console.warn('Audio failed:', e);
   }
@@ -326,7 +326,7 @@ export default function GlobalOrderAlert() {
         prevIds.current = pendingIds;
         isFirstFetch.current = false;
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   useEffect(() => {

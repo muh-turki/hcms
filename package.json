@@ -2,11 +2,13 @@
   "name": "hcms",
   "version": "1.0.0",
   "description": "Hotel Café Management System",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "dev": "concurrently --names \"BACKEND,FRONTEND\" --prefix-colors \"cyan,magenta\" \"node api/index.js\" \"vite --host --port 5190\"",
     "build": "vite build",
-    "start": "NODE_ENV=production node api/index.js",
-    "build:start": "vite build && NODE_ENV=production node api/index.js",
+    "start": "node api/index.js",
     "preview": "vite preview",
     "seed": "node api/seed.js"
   },
