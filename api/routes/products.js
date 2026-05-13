@@ -7,14 +7,14 @@ router.get('/', verifyToken, (req, res) => {
   const { category, lowstock } = req.query;
   let query = `
     SELECT *, 
-      CASE WHEN current_stock <= min_stock_level THEN 1 ELSE 0 END as is_low_stock
+      CASE WHEN track_stock = 1 AND current_stock <= min_stock_level THEN 1 ELSE 0 END as is_low_stock
     FROM products
   `;
   const params = [];
   const conditions = [];
 
   if (category) { conditions.push('category = ?'); params.push(category); }
-  if (lowstock === '1') conditions.push('current_stock <= min_stock_level');
+  if (lowstock === '1') conditions.push('track_stock = 1 AND current_stock <= min_stock_level');
   if (conditions.length) query += ' WHERE ' + conditions.join(' AND ');
   query += ' ORDER BY category, name';
 
@@ -35,27 +35,29 @@ router.get('/categories', verifyToken, (req, res) => {
 
 // POST /api/products (admin + supervisor)
 router.post('/', verifyToken, requireSupervisor, (req, res) => {
-  const { name, name_ar, sku, category, cost_price, selling_price, current_stock, min_stock_level, expiry_date } = req.body;
+  const { name, name_ar, sku, category, cost_price, selling_price, current_stock, min_stock_level, expiry_date, track_stock } = req.body;
   if (!name || !category) return res.status(400).json({ error: 'Name and category required' });
 
+  const trackStock = track_stock === false || track_stock === 0 ? 0 : 1;
   const result = db.prepare(`
-    INSERT INTO products (name, name_ar, sku, category, cost_price, selling_price, current_stock, min_stock_level, expiry_date)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(name, name_ar || null, sku || null, category, cost_price || 0, selling_price || 0, current_stock || 0, min_stock_level || 5, expiry_date || null);
+    INSERT INTO products (name, name_ar, sku, category, cost_price, selling_price, current_stock, min_stock_level, expiry_date, track_stock)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(name, name_ar || null, sku || null, category, cost_price || 0, selling_price || 0, trackStock ? (current_stock || 0) : 0, trackStock ? (min_stock_level || 5) : 0, expiry_date || null, trackStock);
 
   res.status(201).json(db.prepare('SELECT * FROM products WHERE id = ?').get(result.lastInsertRowid));
 });
 
 // PUT /api/products/:id (admin + supervisor)
 router.put('/:id', verifyToken, requireSupervisor, (req, res) => {
-  const { name, name_ar, sku, category, cost_price, selling_price, current_stock, min_stock_level, expiry_date } = req.body;
+  const { name, name_ar, sku, category, cost_price, selling_price, current_stock, min_stock_level, expiry_date, track_stock } = req.body;
   const { id } = req.params;
 
+  const trackStock = track_stock === false || track_stock === 0 ? 0 : 1;
   db.prepare(`
     UPDATE products SET name=?, name_ar=?, sku=?, category=?, cost_price=?, selling_price=?,
-      current_stock=?, min_stock_level=?, expiry_date=?, updated_at=datetime('now')
+      current_stock=?, min_stock_level=?, expiry_date=?, track_stock=?, updated_at=datetime('now')
     WHERE id=?
-  `).run(name, name_ar || null, sku || null, category, cost_price, selling_price, current_stock, min_stock_level, expiry_date || null, id);
+  `).run(name, name_ar || null, sku || null, category, cost_price, selling_price, trackStock ? current_stock : 0, trackStock ? min_stock_level : 0, expiry_date || null, trackStock, id);
 
   const product = db.prepare('SELECT * FROM products WHERE id = ?').get(id);
   if (!product) return res.status(404).json({ error: 'Product not found' });

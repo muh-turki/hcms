@@ -24,7 +24,7 @@ export default function POS() {
   }, []);
 
   const addToCart = p => {
-    if (p.current_stock <= 0) return toast.error(t('pos.out_of_stock'));
+    if (p.track_stock && p.current_stock <= 0) return toast.error(t('pos.out_of_stock'));
     setCart(curr => {
       const exist = curr.find(it => it.id === p.id);
       if (exist) return curr.map(it => it.id === p.id ? { ...it, qty: it.qty + 1 } : it);
@@ -174,10 +174,13 @@ export default function POS() {
           </div>
 
           <div className="product-grid">
-            {filtered.map(p => (
+            {filtered.map(p => {
+              const tracked = p.track_stock !== 0;
+              const outOfStock = tracked && p.current_stock <= 0;
+              return (
               <div 
                 key={p.id} 
-                className={`product-card ${p.current_stock <= 0 ? 'out-of-stock' : ''}`}
+                className={`product-card ${outOfStock ? 'out-of-stock' : ''}`}
                 onClick={() => addToCart(p)}
               >
                 <div className="product-card-category">{t('cat.' + p.category)}</div>
@@ -189,10 +192,12 @@ export default function POS() {
                 <div className="product-card-name">{p.name}</div>
                 <div className="product-card-price">{fmt(p.selling_price)}</div>
                 <div className="product-card-stock">
-                  {p.current_stock > 0 ? `${p.current_stock} ${t('pos.available')}` : t('pos.out_of_stock')}
+                  {!tracked ? `♾️ ${lang === 'ar' ? 'متاح دائماً' : 'Always available'}` :
+                   p.current_stock > 0 ? `${p.current_stock} ${t('pos.available')}` : t('pos.out_of_stock')}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
           {filtered.length === 0 && <div className="empty-state">No products found</div>}
         </div>

@@ -5,11 +5,11 @@ import TopBar from '../components/TopBar';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../auth/AuthContext';
 
-const EMPTY = { name: '', name_ar: '', sku: '', category: 'General', cost_price: 0, selling_price: 0, current_stock: 0, min_stock_level: 5, expiry_date: '' };
+const EMPTY = { name: '', name_ar: '', sku: '', category: 'General', cost_price: 0, selling_price: 0, current_stock: 0, min_stock_level: 5, expiry_date: '', track_stock: 1 };
 
 export default function Inventory() {
   const { user } = useAuth();
-  const { t } = useApp();
+  const { t, lang } = useApp();
   const [products, setProducts] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [search, setSearch]     = useState('');
@@ -18,6 +18,7 @@ export default function Inventory() {
   const [saving, setSaving]     = useState(false);
 
   const isAdmin = user?.role === 'admin';
+  const canEdit = user?.role === 'admin' || user?.role === 'supervisor';
 
   useEffect(() => { fetch(); }, []);
   const fetch = () => {
@@ -47,6 +48,8 @@ export default function Inventory() {
   };
 
   const filtered = products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()) || p.sku?.toLowerCase().includes(search.toLowerCase()));
+
+  const isAr = lang === 'ar';
 
   return (
     <>
@@ -99,16 +102,62 @@ export default function Inventory() {
                   <input className="form-input" type="number" step="0.01" value={form.selling_price} onChange={e => f('selling_price', e.target.value)} />
                 </div>
               </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">{t('inv.current_stock')}</label>
-                  <input className="form-input" type="number" value={form.current_stock} onChange={e => f('current_stock', e.target.value)} />
+
+              {/* ── Track Stock Toggle ── */}
+              <div className="form-group" style={{
+                background: form.track_stock ? 'rgba(16,185,129,0.06)' : 'rgba(245,158,11,0.08)',
+                border: `1px solid ${form.track_stock ? 'rgba(16,185,129,0.2)' : 'rgba(245,158,11,0.25)'}`,
+                borderRadius: 10,
+                padding: '12px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }} onClick={() => f('track_stock', form.track_stock ? 0 : 1)}>
+                <div style={{
+                  width: 44, height: 24, borderRadius: 12,
+                  background: form.track_stock ? '#10b981' : '#94a3b8',
+                  position: 'relative', transition: 'background 0.2s ease', flexShrink: 0,
+                }}>
+                  <div style={{
+                    width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                    position: 'absolute', top: 2,
+                    left: form.track_stock ? 22 : 2,
+                    transition: 'left 0.2s ease',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                  }} />
                 </div>
-                <div className="form-group">
-                  <label className="form-label">{t('inv.min_stock')}</label>
-                  <input className="form-input" type="number" value={form.min_stock_level} onChange={e => f('min_stock_level', e.target.value)} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                    {form.track_stock
+                      ? (isAr ? '📦 منتج بمخزون محدود' : '📦 Track Stock')
+                      : (isAr ? '♾️ منتج بدون مخزون (غير معدود)' : '♾️ Unlimited (No Stock Tracking)')
+                    }
+                  </div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                    {form.track_stock
+                      ? (isAr ? 'يتم خصم الكمية تلقائياً عند كل عملية بيع' : 'Stock is deducted automatically on each sale')
+                      : (isAr ? 'مثل القهوة والشاي — لا يُحسب لها مخزون' : 'Like coffee & tea — never runs out of stock')
+                    }
+                  </div>
                 </div>
               </div>
+
+              {/* ── Stock fields (only when tracking) ── */}
+              {form.track_stock ? (
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">{t('inv.current_stock')}</label>
+                    <input className="form-input" type="number" value={form.current_stock} onChange={e => f('current_stock', e.target.value)} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">{t('inv.min_stock')}</label>
+                    <input className="form-input" type="number" value={form.min_stock_level} onChange={e => f('min_stock_level', e.target.value)} />
+                  </div>
+                </div>
+              ) : null}
+
               <div className="form-group">
                 <label className="form-label">{t('inv.expiry_date')}</label>
                 <input className="form-input" type="date" value={form.expiry_date || ''} onChange={e => f('expiry_date', e.target.value)} />
@@ -125,7 +174,7 @@ export default function Inventory() {
       <div className="page">
         <div className="page-header">
           <div><div className="page-title">{t('nav.inventory')}</div><div className="page-subtitle">{products.length} {products.length === 1 ? 'item' : 'items'} total</div></div>
-          {isAdmin && <button className="btn btn-primary" onClick={() => open()}>➕ {t('inv.add_product')}</button>}
+          {canEdit && <button className="btn btn-primary" onClick={() => open()}>➕ {t('inv.add_product')}</button>}
         </div>
 
         <div className="filters-bar">
@@ -145,14 +194,15 @@ export default function Inventory() {
                   <th>{t('inv.margin')}</th>
                   <th>{t('inv.expiry')}</th>
                   <th>{t('inv.status')}</th>
-                  {isAdmin && <th>{t('common.actions')}</th>}
+                  {canEdit && <th>{t('common.actions')}</th>}
                 </tr>
               </thead>
               <tbody>
                 {filtered.map(p => {
                   const margin = p.selling_price - p.cost_price;
-                  const isLow = p.current_stock <= p.min_stock_level;
-                  const isOut = p.current_stock <= 0;
+                  const tracked = p.track_stock !== 0;
+                  const isLow = tracked && p.current_stock <= p.min_stock_level;
+                  const isOut = tracked && p.current_stock <= 0;
                   return (
                     <tr key={p.id}>
                       <td style={{ fontWeight: 600 }}>
@@ -161,21 +211,29 @@ export default function Inventory() {
                         <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{p.sku}</span>
                       </td>
                       <td><span className="badge badge-gray">{t('cat.' + p.category)}</span></td>
-                      <td><span className={`badge ${isOut ? 'badge-red' : isLow ? 'badge-yellow' : 'badge-green'}`}>{p.current_stock}</span></td>
-                      <td style={{ color: 'var(--text-muted)' }}>{p.min_stock_level}</td>
+                      <td>
+                        {tracked
+                          ? <span className={`badge ${isOut ? 'badge-red' : isLow ? 'badge-yellow' : 'badge-green'}`}>{p.current_stock}</span>
+                          : <span className="badge" style={{ background: 'rgba(139,92,246,0.12)', color: '#8b5cf6' }}>♾️</span>
+                        }
+                      </td>
+                      <td style={{ color: 'var(--text-muted)' }}>{tracked ? p.min_stock_level : '—'}</td>
                       <td>{Number(p.selling_price).toFixed(2)}</td>
                       <td style={{ color: margin >= 0 ? 'var(--green)' : 'var(--red)' }}>{margin.toFixed(2)}</td>
                       <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{p.expiry_date || '—'}</td>
                       <td>
-                        {isOut ? <span className="badge badge-red">{t('inv.out')}</span> : 
-                         isLow ? <span className="badge badge-yellow">{t('inv.low')}</span> : 
-                        <span className="badge badge-green">{t('inv.ok')}</span>}
+                        {!tracked
+                          ? <span className="badge" style={{ background: 'rgba(139,92,246,0.12)', color: '#8b5cf6' }}>{isAr ? '♾️ غير محدود' : '♾️ Unlimited'}</span>
+                          : isOut ? <span className="badge badge-red">{t('inv.out')}</span>
+                          : isLow ? <span className="badge badge-yellow">{t('inv.low')}</span>
+                          : <span className="badge badge-green">{t('inv.ok')}</span>
+                        }
                       </td>
-                      {isAdmin && (
+                      {canEdit && (
                         <td>
                           <div style={{ display: 'flex', gap: 6 }}>
                             <button className="btn btn-secondary btn-sm" onClick={() => open(p)}>✏️</button>
-                            <button className="btn btn-danger btn-sm" onClick={() => del(p.id)}>🗑️</button>
+                            {isAdmin && <button className="btn btn-danger btn-sm" onClick={() => del(p.id)}>🗑️</button>}
                           </div>
                         </td>
                       )}

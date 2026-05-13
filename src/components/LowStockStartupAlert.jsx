@@ -54,6 +54,7 @@ export default function LowStockStartupAlert() {
       .then(r => {
         // Critical = current_stock is ≤ 25% of min_stock_level
         const critical = r.data.filter(p => {
+          if (!p.track_stock) return false; // Skip untracked products
           if (!p.min_stock_level || p.min_stock_level <= 0) return false;
           const ratio = p.current_stock / p.min_stock_level;
           return ratio <= 0.25;

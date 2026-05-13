@@ -30,7 +30,8 @@ router.post('/', verifyToken, (req, res) => {
     for (const item of items) {
       const product = db.prepare('SELECT * FROM products WHERE id = ?').get(item.product_id);
       if (!product) throw new Error(`Product ${item.product_id} not found`);
-      if (product.current_stock < item.quantity) {
+      // Only check stock for tracked products
+      if (product.track_stock && product.current_stock < item.quantity) {
         throw new Error(`Insufficient stock for "${product.name}" (available: ${product.current_stock})`);
       }
       subtotal += product.selling_price * item.quantity;
@@ -49,12 +50,14 @@ router.post('/', verifyToken, (req, res) => {
 
     const sale_id = saleResult.lastInsertRowid;
 
-    // Insert items + deduct stock
+    // Insert items + deduct stock (only for tracked products)
     for (const { product, quantity, price } of itemDetails) {
       db.prepare('INSERT INTO sale_items (sale_id, product_id, quantity, price) VALUES (?, ?, ?, ?)')
         .run(sale_id, product.id, quantity, price);
-      db.prepare("UPDATE products SET current_stock = current_stock - ?, updated_at = datetime('now') WHERE id = ?")
-        .run(quantity, product.id);
+      if (product.track_stock) {
+        db.prepare("UPDATE products SET current_stock = current_stock - ?, updated_at = datetime('now') WHERE id = ?")
+          .run(quantity, product.id);
+      }
     }
 
     db.exec('COMMIT');
