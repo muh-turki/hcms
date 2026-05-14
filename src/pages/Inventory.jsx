@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import api from '../api';
 import toast from 'react-hot-toast';
 import TopBar from '../components/TopBar';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../auth/AuthContext';
 
-const EMPTY = { name: '', name_ar: '', sku: '', category: 'General', cost_price: 0, selling_price: 0, current_stock: 0, min_stock_level: 5, expiry_date: '', track_stock: 1 };
+const EMPTY = { name: '', name_ar: '', sku: '', category: 'General', cost_price: 0, selling_price: 0, current_stock: 0, min_stock_level: 5, expiry_date: '', track_stock: 1, image_data: null };
 
 export default function Inventory() {
   const { user } = useAuth();
@@ -13,9 +13,10 @@ export default function Inventory() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [search, setSearch]     = useState('');
-  const [modal, setModal]       = useState(null); // 'add' or 'edit'
+  const [modal, setModal]       = useState(null);
   const [form, setForm]         = useState(EMPTY);
   const [saving, setSaving]     = useState(false);
+  const fileRef = useRef();
 
   const isAdmin = user?.role === 'admin';
   const canEdit = user?.role === 'admin' || user?.role === 'supervisor';
@@ -29,6 +30,19 @@ export default function Inventory() {
   const open = (p = null) => { setForm(p || EMPTY); setModal(p ? 'edit' : 'add'); };
   const close = () => { setModal(null); setForm(EMPTY); };
   const f = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
+
+  // Image upload handler
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 500 * 1024) {
+      toast.error(isAr ? 'الصورة كبيرة جداً (الحد 500KB)' : 'Image too large (max 500KB)');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => f('image_data', reader.result);
+    reader.readAsDataURL(file);
+  };
 
   const save = async e => {
     e.preventDefault(); setSaving(true);
@@ -63,6 +77,42 @@ export default function Inventory() {
               <button className="btn btn-ghost btn-icon" onClick={close}>✕</button>
             </div>
             <form onSubmit={save}>
+
+              {/* ── Product Image ── */}
+              <div className="form-group" style={{ textAlign: 'center' }}>
+                <input type="file" accept="image/*" ref={fileRef} style={{ display: 'none' }} onChange={handleImageUpload} />
+                <div
+                  onClick={() => fileRef.current?.click()}
+                  style={{
+                    width: 100, height: 100, margin: '0 auto 8px',
+                    borderRadius: 16,
+                    border: `2px dashed ${form.image_data ? 'transparent' : 'var(--border)'}`,
+                    background: form.image_data ? 'transparent' : 'var(--bg-card)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', overflow: 'hidden',
+                    transition: 'all 0.2s ease',
+                    position: 'relative',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = form.image_data ? 'transparent' : 'var(--border)'}
+                >
+                  {form.image_data ? (
+                    <img src={form.image_data} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
+                      <div style={{ fontSize: 28 }}>📷</div>
+                      <div style={{ fontSize: '0.7rem' }}>{isAr ? 'أضف صورة' : 'Add Image'}</div>
+                    </div>
+                  )}
+                </div>
+                {form.image_data && (
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={(e) => { e.stopPropagation(); f('image_data', null); }}
+                    style={{ fontSize: '0.75rem', color: 'var(--red)' }}>
+                    🗑️ {isAr ? 'حذف الصورة' : 'Remove'}
+                  </button>
+                )}
+              </div>
+
               <div className="form-group">
                 <label className="form-label">{t('common.name')} (English) <span className="required">*</span></label>
                 <input className="form-input" placeholder="e.g. Arabic Coffee" value={form.name} onChange={e => f('name', e.target.value)} required />
@@ -144,7 +194,6 @@ export default function Inventory() {
                 </div>
               </div>
 
-              {/* ── Stock fields (only when tracking) ── */}
               {form.track_stock ? (
                 <div className="form-row">
                   <div className="form-group">
@@ -186,6 +235,7 @@ export default function Inventory() {
             <table>
               <thead>
                 <tr>
+                  <th style={{ width: 50 }}></th>
                   <th>{t('common.name')}</th>
                   <th>{t('common.category')}</th>
                   <th>{t('inv.stock')}</th>
@@ -203,8 +253,20 @@ export default function Inventory() {
                   const tracked = p.track_stock !== 0;
                   const isLow = tracked && p.current_stock <= p.min_stock_level;
                   const isOut = tracked && p.current_stock <= 0;
+                  const catEmoji = p.category?.toLowerCase().includes('bev') ? '☕'
+                    : p.category?.toLowerCase().includes('food') ? '🍔'
+                    : p.category?.toLowerCase().includes('dess') ? '🍰' : '📦';
                   return (
                     <tr key={p.id}>
+                      <td>
+                        {p.image_data ? (
+                          <img src={p.image_data} alt="" style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover' }} />
+                        ) : (
+                          <div style={{ width: 40, height: 40, borderRadius: 8, background: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
+                            {catEmoji}
+                          </div>
+                        )}
+                      </td>
                       <td style={{ fontWeight: 600 }}>
                         {p.name}
                         {p.name_ar && <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', direction: 'rtl', textAlign: 'right' }}>{p.name_ar}</div>}

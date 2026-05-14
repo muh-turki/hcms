@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import { useApp } from '../context/AppContext';
@@ -9,6 +9,9 @@ const SESSION_KEY = 'hcms_low_stock_alerted';
 function playWarningSound() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    // Resume context in case it was suspended by browser policy
+    if (ctx.state === 'suspended') ctx.resume();
+
     const master = ctx.createGain();
     master.gain.setValueAtTime(0.85, ctx.currentTime);
     master.connect(ctx.destination);
@@ -28,15 +31,17 @@ function playWarningSound() {
     };
 
     const t = ctx.currentTime;
-    // Three descending warning tones — distinct from the order alert
+    // Three descending warning tones
     tone(t + 0.00, 660, 0.30, 'triangle');
     tone(t + 0.00, 330, 0.30, 'sawtooth');
     tone(t + 0.40, 550, 0.30, 'triangle');
     tone(t + 0.40, 275, 0.30, 'sawtooth');
     tone(t + 0.80, 440, 0.50, 'triangle');
     tone(t + 0.80, 220, 0.50, 'sawtooth');
+    return true;
   } catch (e) {
     console.warn('Audio failed:', e);
+    return false;
   }
 }
 
@@ -45,16 +50,23 @@ export default function LowStockStartupAlert() {
   const navigate = useNavigate();
   const [criticalItems, setCriticalItems] = useState([]);
   const [visible, setVisible] = useState(false);
+  const [soundPlayed, setSoundPlayed] = useState(false);
+  const hasTriedAutoPlay = useRef(false);
+
+  // Try playing sound — called on user interaction
+  const tryPlaySound = useCallback(() => {
+    if (soundPlayed) return;
+    const ok = playWarningSound();
+    if (ok) setSoundPlayed(true);
+  }, [soundPlayed]);
 
   useEffect(() => {
-    // Only show once per browser session
     if (sessionStorage.getItem(SESSION_KEY)) return;
 
     api.get('/products')
       .then(r => {
-        // Critical = current_stock is ≤ 25% of min_stock_level
         const critical = r.data.filter(p => {
-          if (!p.track_stock) return false; // Skip untracked products
+          if (!p.track_stock) return false;
           if (!p.min_stock_level || p.min_stock_level <= 0) return false;
           const ratio = p.current_stock / p.min_stock_level;
           return ratio <= 0.25;
@@ -64,8 +76,14 @@ export default function LowStockStartupAlert() {
           setCriticalItems(critical);
           setVisible(true);
           sessionStorage.setItem(SESSION_KEY, '1');
-          // Play warning sound after a short delay (let the modal render first)
-          setTimeout(playWarningSound, 300);
+          // Try autoplay after delay
+          setTimeout(() => {
+            if (!hasTriedAutoPlay.current) {
+              hasTriedAutoPlay.current = true;
+              const ok = playWarningSound();
+              if (ok) setSoundPlayed(true);
+            }
+          }, 500);
         }
       })
       .catch(() => {});
@@ -91,7 +109,11 @@ export default function LowStockStartupAlert() {
         animation: 'lsaFadeIn 0.3s ease',
         backdropFilter: 'blur(5px)',
       }}
-      onClick={e => e.target === e.currentTarget && handleClose()}
+      onClick={e => {
+        // Play sound on any click inside the modal (bypasses browser autoplay policy)
+        tryPlaySound();
+        if (e.target === e.currentTarget) handleClose();
+      }}
     >
       {/* Modal Card */}
       <div style={{
@@ -117,6 +139,35 @@ export default function LowStockStartupAlert() {
             animation: 'lsaWobble 0.8s ease-in-out infinite alternate',
             display: 'inline-block',
           }}>📦</div>
+          {/* Sound Button */}
+          {!soundPlayed && (
+            <div style={{ marginBottom: 12 }}>
+              <button
+                onClick={(e) => { e.stopPropagation(); tryPlaySound(); }}
+                style={{
+                  background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 12,
+                  padding: '10px 24px',
+                  fontSize: '0.95rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  animation: 'lsaCardPulse 1s ease-in-out infinite alternate',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                }}
+              >
+                🔊 {isAr ? 'اضغط لسماع التنبيه' : 'Click to hear alert'}
+              </button>
+            </div>
+          )}
+          {soundPlayed && (
+            <div style={{ marginBottom: 8, fontSize: '0.8rem', color: '#10b981' }}>
+              ✅ {isAr ? 'تم تشغيل صوت التنبيه' : 'Alert sound played'}
+            </div>
+          )}
           <h1 style={{
             margin: '0 0 8px',
             color: '#f59e0b',

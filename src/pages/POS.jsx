@@ -185,9 +185,13 @@ export default function POS() {
               >
                 <div className="product-card-category">{t('cat.' + p.category)}</div>
                 <div className="product-card-emoji">
-                  {p.category.toLowerCase().includes('bev') ? '☕' : 
-                   p.category.toLowerCase().includes('food') ? '🍔' : 
-                   p.category.toLowerCase().includes('dess') ? '🍰' : '📦'}
+                  {p.image_data ? (
+                    <img src={p.image_data} alt="" style={{ width: 48, height: 48, borderRadius: 10, objectFit: 'cover' }} />
+                  ) : (
+                    p.category.toLowerCase().includes('bev') ? '☕' : 
+                    p.category.toLowerCase().includes('food') ? '🍔' : 
+                    p.category.toLowerCase().includes('dess') ? '🍰' : '📦'
+                  )}
                 </div>
                 <div className="product-card-name">{p.name}</div>
                 <div className="product-card-price">{fmt(p.selling_price)}</div>

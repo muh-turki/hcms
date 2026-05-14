@@ -118,6 +118,7 @@ db.exec(`
 // ─── Incremental Migrations (safe on existing DBs) ────────────────────────────────────────
 try { db.exec(`ALTER TABLE products ADD COLUMN name_ar TEXT`); } catch {}
 try { db.exec(`ALTER TABLE products ADD COLUMN track_stock INTEGER NOT NULL DEFAULT 1`); } catch {}
+try { db.exec(`ALTER TABLE products ADD COLUMN image_data TEXT`); } catch {}
 
 // Migrate old 'staff' role to 'cashier'
 try { db.exec(`UPDATE users SET role = 'cashier' WHERE role = 'staff'`); } catch {}
