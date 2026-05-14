@@ -11,6 +11,7 @@ export default function Settings() {
   const [qrEnabled, setQrEnabled] = useState('true');
   const [qrHours, setQrHours] = useState('00:00-23:59');
   const [qrMaxItems, setQrMaxItems] = useState('10');
+  const [lanUrl, setLanUrl] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -20,6 +21,7 @@ export default function Settings() {
       setQrEnabled(settings.qr_enabled !== 'false' ? 'true' : 'false');
       setQrHours(settings.qr_hours || '00:00-23:59');
       setQrMaxItems(settings.qr_max_items || '10');
+      setLanUrl(settings.lan_url || '');
     }
   }, [settings]);
 
@@ -33,6 +35,19 @@ export default function Settings() {
     reader.readAsDataURL(file);
   };
 
+  const autoDetectLan = async () => {
+    try {
+      const res = await api.get('/info/ip');
+      const ip = res.data.ip;
+      if (ip) {
+        setLanUrl(`http://${ip}:5190`);
+        toast.success(lang === 'ar' ? 'تم تحديد العنوان تلقائياً' : 'LAN URL auto-detected');
+      }
+    } catch {
+      toast.error(lang === 'ar' ? 'فشل التحديد التلقائي' : 'Auto-detect failed');
+    }
+  };
+
   const save = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -42,7 +57,8 @@ export default function Settings() {
         logo_data: logoData,
         qr_enabled: qrEnabled,
         qr_hours: qrHours,
-        qr_max_items: qrMaxItems
+        qr_max_items: qrMaxItems,
+        lan_url: lanUrl
       });
       toast.success(t('common.save') + '!');
       await fetchSettings(); // refresh global settings
@@ -109,6 +125,26 @@ export default function Settings() {
               <div className="form-group">
                 <label className="form-label">{lang === 'ar' ? 'أقصى عدد منتجات للطلب الواحد' : 'Max Items per Order'}</label>
                 <input className="form-input" type="number" min="1" max="100" value={qrMaxItems} onChange={e => setQrMaxItems(e.target.value)} />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">{lang === 'ar' ? 'رابط الشبكة المحلية (Local LAN URL)' : 'Local Network URL (LAN)'}</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input 
+                  className="form-input" 
+                  value={lanUrl} 
+                  onChange={e => setLanUrl(e.target.value)} 
+                  placeholder="http://192.168.x.x:5190" 
+                />
+                <button type="button" className="btn btn-secondary" onClick={autoDetectLan}>
+                  🔍 {lang === 'ar' ? 'تحديد تلقائي' : 'Detect'}
+                </button>
+              </div>
+              <div className="form-label" style={{ marginTop: 6, fontSize: '0.75rem', fontWeight: 400 }}>
+                {lang === 'ar' 
+                  ? 'هذا الرابط سيتم استخدامه في إنشاء أكواد QR للغرف.' 
+                  : 'This URL will be used to generate Room Service QR codes.'}
               </div>
             </div>
 

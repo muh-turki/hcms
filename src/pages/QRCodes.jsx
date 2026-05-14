@@ -5,7 +5,7 @@ import { useApp } from '../context/AppContext';
 import api from '../api';
 
 export default function QRCodes() {
-  const { lang } = useApp();
+  const { lang, settings } = useApp();
   const [startRoom, setStartRoom] = useState(101);
   const [endRoom, setEndRoom] = useState(120);
   const [rooms, setRooms] = useState([]);
@@ -14,7 +14,13 @@ export default function QRCodes() {
   const [testing, setTesting] = useState(false);
 
   React.useEffect(() => {
-    // Detect Local IP from backend
+    // 1. If admin set a custom LAN URL, use it
+    if (settings?.lan_url) {
+      setBaseUrl(settings.lan_url);
+      return;
+    }
+
+    // 2. Fallback: Detect Local IP from backend
     api.get('/info/ip')
       .then(res => {
         const ip = res.data.ip || '127.0.0.1';
@@ -23,7 +29,7 @@ export default function QRCodes() {
       .catch(() => {
         setBaseUrl(window.location.origin);
       });
-  }, []);
+  }, [settings]);
 
   const generate = (e) => {
     e.preventDefault();
