@@ -12,6 +12,7 @@ export default function Settings() {
   const [qrHours, setQrHours] = useState('00:00-23:59');
   const [qrMaxItems, setQrMaxItems] = useState('10');
   const [lanUrl, setLanUrl] = useState('');
+  const [availableIps, setAvailableIps] = useState([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -23,6 +24,8 @@ export default function Settings() {
       setQrMaxItems(settings.qr_max_items || '10');
       setLanUrl(settings.lan_url || '');
     }
+    // Fetch all local IPs for suggestion
+    api.get('/info/ip').then(res => setAvailableIps(res.data.all || [])).catch(() => {});
   }, [settings]);
 
   const handleLogoChange = (e) => {
@@ -141,6 +144,26 @@ export default function Settings() {
                   🔍 {lang === 'ar' ? 'تحديد تلقائي' : 'Detect'}
                 </button>
               </div>
+              
+              {availableIps.length > 0 && (
+                <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', paddingTop: 4 }}>
+                    {lang === 'ar' ? 'عناوين مقترحة:' : 'Suggested IPs:'}
+                  </span>
+                  {availableIps.map(ip => (
+                    <button 
+                      key={ip.address} 
+                      type="button" 
+                      className="badge" 
+                      onClick={() => setLanUrl(`http://${ip.address}:5190`)}
+                      style={{ cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--bg-elevated)', color: 'var(--accent)' }}
+                    >
+                      {ip.address} ({ip.name})
+                    </button>
+                  ))}
+                </div>
+              )}
+
               <div className="form-label" style={{ marginTop: 6, fontSize: '0.75rem', fontWeight: 400 }}>
                 {lang === 'ar' 
                   ? 'هذا الرابط سيتم استخدامه في إنشاء أكواد QR للغرف.' 

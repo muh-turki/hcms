@@ -31,16 +31,18 @@ app.get('/api/health', (req, res) => {
 
 app.get('/api/info/ip', (req, res) => {
   const nets = os.networkInterfaces();
-  let address = 'localhost';
+  const addresses = [];
   for (const name of Object.keys(nets)) {
     for (const net of nets[name]) {
       if (net.family === 'IPv4' && !net.internal) {
-        address = net.address;
-        break;
+        addresses.push({ name, address: net.address });
       }
     }
   }
-  res.json({ ip: address });
+  res.json({ 
+    ip: addresses.length > 0 ? addresses[0].address : 'localhost',
+    all: addresses 
+  });
 });
 
 // ─── Serve React frontend in production ──────────────────────────────────────────────

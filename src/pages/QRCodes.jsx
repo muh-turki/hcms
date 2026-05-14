@@ -65,13 +65,15 @@ export default function QRCodes() {
     window.print();
   };
 
+  const isPublicDomain = window.location.hostname.includes('railway.app') || window.location.hostname.includes('up.railway.app');
+
   return (
     <>
-      <TopBar title={lang === 'ar' ? 'مولد أكواد الغرف (QR)' : 'QR Code Generator'} />
+      <TopBar title={lang === 'ar' ? 'أكواد الغرف' : 'QR Room Codes'} />
       <div className="page no-print">
 
         {/* ── Network Info Card ─────────────────────────────── */}
-        <div className="card" style={{ marginBottom: 16, background: 'linear-gradient(135deg, rgba(59,130,246,0.08), rgba(99,102,241,0.08))', border: '1px solid rgba(99,102,241,0.25)' }}>
+        <div className="card" style={{ marginBottom: 16, background: 'linear-gradient(135deg, rgba(59,130,246,0.08), rgba(99,102,241,0.08))', border: `2px solid ${networkOk === true ? '#22c55e' : networkOk === false ? '#ef4444' : 'rgba(99,102,241,0.25)'}` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
             <div style={{ fontSize: 32 }}>📡</div>
             <div style={{ flex: 1 }}>
@@ -111,14 +113,61 @@ export default function QRCodes() {
               </button>
             </div>
           </div>
+
+          {/* Smart Warning for Cloud Access */}
+          {isPublicDomain && !settings?.lan_url && (
+            <div style={{
+              marginTop: 16, background: 'rgba(245,158,11,0.15)', border: '1px solid #f59e0b',
+              borderRadius: 10, padding: '14px', color: '#d97706'
+            }}>
+              <div style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                ⚠️ {lang === 'ar' ? 'تنبيه: أنت تستخدم نسخة الإنترنت حالياً' : 'Warning: Using Public Cloud Version'}
+              </div>
+              <div style={{ fontSize: '0.88rem', lineHeight: 1.5 }}>
+                {lang === 'ar' 
+                  ? 'الباركود لن يفتح إذا كان "Base URL" لا يحتوي على عنوان آي بي محلي (مثل 192.168.x.x). يرجى التوجه للإعدادات وحفظ رابط الشبكة المحلية أولاً، أو قم بإنشاء الأكواد من جهاز الكمبيوتر الرئيسي للفندق.'
+                  : 'QR codes will NOT open if the "Base URL" is not a local IP (like 192.168.x.x). Please set the LAN URL in Settings first, or use the Hotel\'s Main PC to generate codes.'}
+              </div>
+            </div>
+          )}
+
           {networkOk === false && (
             <div style={{
-              marginTop: 12, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
-              borderRadius: 8, padding: '10px 14px', color: '#ef4444', fontSize: '0.9rem'
+              marginTop: 16, background: 'rgba(239,68,68,0.05)', border: '2px solid rgba(239,68,68,0.3)',
+              borderRadius: 12, padding: '16px', color: '#ef4444'
             }}>
-              ⚠️ {lang === 'ar'
-                ? 'لا يمكن الوصول للرابط من الشبكة. تأكد أن: (١) الجوال متصل بنفس الـ Wi-Fi (٢) جدار الحماية لا يحجب المنفذ 5190'
-                : 'Cannot reach URL from network. Check: (1) Phone is on same Wi-Fi (2) Firewall allows port 5190'}
+              <div style={{ fontWeight: 'bold', fontSize: '1rem', marginBottom: 10 }}>
+                ❌ {lang === 'ar' ? 'مشكلة في جدار الحماية (Firewall)' : 'Firewall Connection Blocked'}
+              </div>
+              <div style={{ fontSize: '0.9rem', lineHeight: 1.6, color: 'var(--text-primary)' }}>
+                {lang === 'ar' 
+                  ? 'رغم أنك متصل بنفس الشبكة، ويندوز يمنع الجوال من الدخول. اتبع الخطوات التالية:' 
+                  : 'Even on the same Wi-Fi, Windows is blocking the phone. Follow these steps:'}
+                
+                <ol style={{ marginTop: 10, paddingLeft: 20 }}>
+                  <li>{lang === 'ar' ? 'افحص رابط البث بالأعلى (يجب أن يبدأ بـ 192.168.x.x)' : 'Verify Broadcast URL above (must be 192.168.x.x)'}</li>
+                  <li>{lang === 'ar' ? 'انسخ الأمر التالي وشغله في (PowerShell) كمسؤول لفتح المنفذ تلقائياً:' : 'Copy this command and run it in PowerShell (as Admin) to open the port:'}</li>
+                </ol>
+
+                <div style={{ 
+                  background: '#000', color: '#0f0', padding: '12px', borderRadius: 8, 
+                  fontFamily: 'monospace', fontSize: '0.85rem', marginTop: 10, position: 'relative'
+                }}>
+                  New-NetFirewallRule -DisplayName "HCMS Port 5190" -Direction Inbound -LocalPort 5190 -Protocol TCP -Action Allow
+                  <button 
+                    onClick={() => navigator.clipboard.writeText('New-NetFirewallRule -DisplayName "HCMS Port 5190" -Direction Inbound -LocalPort 5190 -Protocol TCP -Action Allow')}
+                    style={{ position: 'absolute', right: 8, top: 8, background: '#333', border: 'none', color: '#fff', borderRadius: 4, cursor: 'pointer', padding: '4px 8px' }}
+                  >
+                    {lang === 'ar' ? 'نسخ الأمر' : 'Copy'}
+                  </button>
+                </div>
+                
+                <p style={{ marginTop: 10, fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  {lang === 'ar' 
+                    ? 'بعد تشغيل الأمر، جرب "اختبار الاتصال" مرة أخرى.' 
+                    : 'After running the command, click "Test Connection" again.'}
+                </p>
+              </div>
             </div>
           )}
           {networkOk === true && (
@@ -127,8 +176,8 @@ export default function QRCodes() {
               borderRadius: 8, padding: '10px 14px', color: '#22c55e', fontSize: '0.9rem'
             }}>
               ✅ {lang === 'ar'
-                ? 'الرابط متاح. أي جوال متصل بنفس الـ Wi-Fi يمكنه فتح الباركود.'
-                : 'URL is reachable. Any phone on the same Wi-Fi can scan the QR codes.'}
+                ? 'الرابط متاح ومكشوف للجوالات. الباركود سيعمل الآن بنجاح!'
+                : 'URL is reachable and exposed. QR codes will work perfectly now!'}
             </div>
           )}
         </div>
